@@ -1,6 +1,6 @@
 /* Implementation of Gale Shapley algorithm for stable matching
 and verification that there does not exist a n = 3 instance where all
-possible matches are stable. 
+possible matches are stable. Also finds a n = 4 instance with 4 solutions.
 Written by Andrew Isaac on 2/1/15 */ 
 
 import java.util.ArrayList;
@@ -11,28 +11,24 @@ public class StableMatch {
    public static void main(String[] args) {
       
       int n = 3;
-      int[] a = new int[n];
-      
+      int[] a = new int[n];      
       for (int i = 0; i < n; i++) {        
          a[i] = i;
       }
-      
+  
       int[][] men = new int[n][n];
       int[][] women = new int[n][n];
       
-      // pick random men and women preferences from all possible permutations
-      ArrayList<Integer[]> allMatches = new ArrayList<Integer[]>();      
-      allMatches(n, n, allMatches, a);
-      
+      // pick random men and women preference permutations
       for (int i = 0; i < n; i++) {
-      
-         Integer[] menPrefs = allMatches.get((int)(Math.random() * n));
-         Integer[] womenPrefs = allMatches.get((int)(Math.random() * n));
-         
+         randPermutation(n, a);
          for (int j = 0; j < n; j++) {
-            men[i][j] = menPrefs[j];
-            women[i][j] = womenPrefs[j];
-         }            
+            men[i][j] = a[j];            
+         }
+         randPermutation(n, a);
+         for (int j = 0; j < n; j++) {
+            women[i][j] = a[j];            
+         }              
       }
       
       for (int i = 0; i < n; i++) {
@@ -45,8 +41,7 @@ public class StableMatch {
             System.out.print(women[i][j] + " ");
          }
          System.out.println();       
-      }
-      
+      }      
            
       System.out.println("\nGale Shapley matching:");
       int[] matches = galeShapley(n,men,women);
@@ -56,14 +51,115 @@ public class StableMatch {
       if (isStable(n, matches, men, women)) {
          System.out.println("Gale-Shapley solution verified to be stable.");
       }
-      else {
-         System.out.println("Must be a programming mistake.");
+      
+      findFullyStableInstance(3);
+      find4StableSolutions(4);      
+   }
+   
+   public static void find4StableSolutions(int n) {
+   
+      int[] a = new int[n];
+      int[][] men = new int[n][n];
+      int[][] women = new int[n][n];
+      int fact = fact(n);
+      int[][] matches = new int[4][n];
+      
+      for (int i = 0; i < n; i++) {
+         a[i] = i;
       }
+      
+      ArrayList<Integer[]> allMatches = new ArrayList<Integer[]>();      
+      allMatches(n, n, allMatches, a);
+     
+      boolean instanceFound = false;
+     
+      while (!instanceFound) {
+      
+         for (int i = 0; i < n; i++) {
+          
+            randPermutation(n, a);         
+            for (int j = 0; j < n; j++) {
+               men[i][j] = a[j];
+            }
+            
+            randPermutation(n, a);
+            for (int j = 0; j < n; j++) {
+               women[i][j] = a[j];
+            }
+         }
+         
+         Iterator<Integer[]> matchesIterator = allMatches.iterator();
 
-      // check if there exists an instance where all possible matches are stable
+         int solutions = 0;
+         matches = new int[4][n];         
+         
+         // test for stabiliy
+         while (matchesIterator.hasNext() && solutions < 4) {
+            Integer[] intArray = matchesIterator.next();
+            
+            int[] testMatches = new int[n];
+            
+            for (int i = 0; i < n; i++) {
+               testMatches[i] = intArray[i];
+            }
+            
+            if (isStable(n, testMatches, men, women)) {
+               
+               for (int i = 0; i < n; i++) {
+                  matches[solutions][i] = testMatches[i];
+               }
+               solutions++;                              
+            }
+         }
+         
+         if (solutions == 4) {
+            instanceFound = true;
+         }
+      }
+      
+      if (instanceFound) {
+         System.out.println("Instance with 4 solutions found.");
+         for (int i = 0; i < n; i++) {
+            System.out.print("Man " + i + ": ");
+            for (int j = 0; j < n; j++) {
+               System.out.print(men[i][j] + " ");
+            }
+         
+            System.out.print(" Woman " + i + ": ");
+            for (int j = 0; j < n; j++) {
+               System.out.print(women[i][j] + " ");
+            }         
+            System.out.println();
+         }
+         
+         for (int i = 0; i < 4; i++) {
+            System.out.println("Solution " + i + ":");
+            for (int j = 0; j < n; j++) {
+               System.out.println("W" + j + " - M" + matches[i][j]);
+            }
+            System.out.println();
+         }
+      }         
+   }
+  
+   // check if there exists an instance where all possible matches are stable
+   public static void findFullyStableInstance(int n) {   
+
+      int[] a = new int[n];
+      
+      for (int i = 0; i < n; i++) {
+         a[i] = i;
+      }
+            
+      ArrayList<Integer[]> allMatches = new ArrayList<Integer[]>();      
+      allMatches(n, n, allMatches, a);
+      
+      int[][] men = new int[n][n];
+      int[][] women = new int[n][n];
+      
       boolean instanceFound = false;
       int[] currentInstance = new int[n * 2];
-      int fact = fact(n);
+      int fact = fact(n);  // factorial of n
      
       while (!instanceFound && !finished(n, fact, currentInstance)) {
          
@@ -81,6 +177,7 @@ public class StableMatch {
          Iterator<Integer[]> matchesIterator = allMatches.iterator();
          boolean stable = true;
          
+         int j = 1;
          // test for stabiliy
          while (matchesIterator.hasNext() && stable) {
             Integer[] intArray = matchesIterator.next();
@@ -143,8 +240,6 @@ public class StableMatch {
       }
       
       currentInstance[i]++;
-      for (i = 0; i < n * 2; i++) {
-      }
    }
    
    // stop at biggest n digit number in base n   
@@ -156,6 +251,19 @@ public class StableMatch {
       }
       
       return i == n * 2;
+   }
+   
+   // generate a random permutation
+   public static void randPermutation(int n, int[] array) {
+      
+      for (int i = 0; i < n; i++) {
+         int index1 = (int)(Math.random() * n);
+         int index2 = (int)(Math.random() * n);
+         
+         int temp = array[index1];
+         array[index1] = array[index2];
+         array[index2] = temp;         
+      }   
    }
    
    // heap's algorithm for generating all permutations
